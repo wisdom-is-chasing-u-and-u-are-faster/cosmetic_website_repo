@@ -1,0 +1,31 @@
+version: "3.8"
+
+services:
+  app:
+    build: .
+    container_name: cosmetics-store-api
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - DATABASE_URL=sqlite:///./cosmetics_store.db
+      - REDIS_URL=redis://redis:6379/0
+      - WEBHOOK_3PL_HMAC_SECRET=secret-webhook-key-3pl
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: cosmetics-store-redis
+    ports:
+      - "6379:6379"
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /data
+    restart: unless-stopped
