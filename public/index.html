@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aura Luxury Cosmetics Platform — Storefront</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #faf9f6; color: #1a1a1a; margin: 0; padding: 2rem; }
+    .container { max-width: 1000px; margin: 0 auto; background: #fff; padding: 2.5rem; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
+    h1 { font-size: 2.2rem; margin-bottom: 0.5rem; color: #2c2222; }
+    p.subtitle { color: #666; font-size: 1.1rem; margin-bottom: 2rem; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; }
+    .card { border: 1px solid #eee; border-radius: 8px; padding: 1.25rem; transition: transform 0.2s, box-shadow 0.2s; background: #fff; text-decoration: none; color: inherit; }
+    .card:hover { transform: translateY(-3px); box-shadow: 0 6px 15px rgba(0,0,0,0.08); border-color: #d4af37; }
+    .card h3 { margin: 0 0 0.5rem; color: #1a1a1a; font-size: 1.2rem; }
+    .card p { margin: 0; color: #777; font-size: 0.9rem; }
+    .badge { display: inline-block; background: #f4ece1; color: #8b5a2b; font-size: 0.75rem; font-weight: 600; padding: 0.2rem 0.5rem; border-radius: 4px; margin-bottom: 0.5rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="badge">Headless Composable Commerce</div>
+    <h1>Aura Luxury Cosmetics Storefront</h1>
+    <p class="subtitle">Enterprise Headless Commerce Implementation (ARCH-5134) with Node.js & TypeScript</p>
+
+    <div class="grid">
+      <a href="/pages/homepage.html" class="card">
+        <span class="badge">Storefront</span>
+        <h3>Homepage</h3>
+        <p>Hero collections, shade matching features, and trending products.</p>
+      </a>
+
+      <a href="/pages/product-listing.html" class="card">
+        <span class="badge">Catalog</span>
+        <h3>Product Listing (PLP)</h3>
+        <p>Faceted filtering by shade, finish, undertone, and vegan formulation.</p>
+      </a>
+
+      <a href="/pages/product-detail.html" class="card">
+        <span class="badge">Catalog</span>
+        <h3>Product Detail (PDP)</h3>
+        <p>Live swatches, MoCRA/EU regulatory ingredient disclosures, and cart add.</p>
+      </a>
+
+      <a href="/pages/cart.html" class="card">
+        <span class="badge">Commerce</span>
+        <h3>Shopping Cart</h3>
+        <p>Promo code engine, shade bundle discounts, and cart review.</p>
+      </a>
+
+      <a href="/pages/checkout.html" class="card">
+        <span class="badge">Commerce</span>
+        <h3>Single-Page Checkout</h3>
+        <p>Inventory reservation locks, guest checkout, and Stripe tokenization.</p>
+      </a>
+
+      <a href="/pages/order-confirmation.html" class="card">
+        <span class="badge">Orders</span>
+        <h3>Order Confirmation</h3>
+        <p>Order receipt, tracking ID, and shipment breakdown.</p>
+      </a>
+
+      <a href="/pages/order-history.html" class="card">
+        <span class="badge">Orders</span>
+        <h3>Order History</h3>
+        <p>3PL real-time shipment status and tracking lookup.</p>
+      </a>
+
+      <a href="/pages/returns.html" class="card">
+        <span class="badge">Self-Service</span>
+        <h3>Returns & Exchanges</h3>
+        <p>Automated shade exchange flow and prepaid label generation.</p>
+      </a>
+
+      <a href="/pages/account.html" class="card">
+        <span class="badge">Privacy</span>
+        <h3>User Account & Privacy</h3>
+        <p>Profile preferences and GDPR/CCPA PII erasure.</p>
+      </a>
+    </div>
+  </div>
+  <script src="/js/api.js"></script>
+</body>
+</html>
