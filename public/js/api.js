@@ -1,105 +1,104 @@
-// public/js/api.js - Client API Client for REST Endpoints
-const API = {
-  baseUrl: "/api/v1",
+/**
+ * Client-Side API Helper for Enterprise Online Cosmetic Store Platform
+ * Connects UI pages dynamically to REST endpoints in api_contract.json
+ */
 
-  async request(endpoint, options = {}) {
-    const url = `${this.baseUrl}${endpoint}`;
-    const headers = {
-      "Content-Type": "application/json",
-      ...(options.headers || {})
-    };
+const API_BASE = '/api/v1';
 
-    try {
-      const response = await fetch(url, { ...options, headers });
-      const data = await response.json();
-
-      if (!response.ok) {
-        const errorMsg = data.detail || data.title || "An error occurred";
-        throw new Error(errorMsg);
+const StoreAPI = {
+  // Products & Faceted Search [REQ-F-001, REQ-F-011]
+  async getProducts(filters = {}) {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, val]) => {
+      if (val !== undefined && val !== null && val !== '') {
+        params.append(key, val);
       }
-      return data;
-    } catch (err) {
-      console.error(`API Error [${endpoint}]:`, err);
-      throw err;
-    }
+    });
+    const res = await fetch(`${API_BASE}/products?${params.toString()}`);
+    if (!res.ok) throw await res.json();
+    return await res.json();
   },
 
-  // Products
-  async getProducts(params = {}) {
-    const query = new URLSearchParams(params).toString();
-    return this.request(`/products${query ? `?${query}` : ""}`);
+  async getProductById(id) {
+    const res = await fetch(`${API_BASE}/products/${id}`);
+    if (!res.ok) throw await res.json();
+    return await res.json();
   },
 
-  async getProductDetail(id) {
-    return this.request(`/products/${id}`);
-  },
-
-  // Merchandising & Promos
-  async getHeroPromotions() {
-    return this.request("/promotions/hero");
-  },
-
-  async applyPromo(code, cartTotal, items = []) {
-    return this.request("/promotions/apply", {
-      method: "POST",
+  // Promo Engine [REQ-F-015]
+  async applyPromoCode(code, cartTotal, items = []) {
+    const res = await fetch(`${API_BASE}/promotions/apply`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code, cart_total: cartTotal, items })
     });
+    if (!res.ok) throw await res.json();
+    return await res.json();
   },
 
-  // Inventory & Checkout
-  async reserveInventory(items, idempotencyKey = null) {
-    const headers = idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {};
-    return this.request("/checkout/reserve", {
-      method: "POST",
+  // Inventory Reservation Lock [REQ-F-009, REQ-F-013]
+  async reserveInventory(sessionId, items, idempotencyKey = null) {
+    const headers = { 'Content-Type': 'application/json' };
+    if (idempotencyKey) headers['Idempotency-Key'] = idempotencyKey;
+
+    const res = await fetch(`${API_BASE}/checkout/reserve`, {
+      method: 'POST',
       headers,
-      body: JSON.stringify({ items, reservation_ttl_seconds: 900 })
+      body: JSON.stringify({ session_id: sessionId, items })
     });
+    if (!res.ok) throw await res.json();
+    return await res.json();
   },
 
-  async processCheckout(payload, idempotencyKey = null) {
-    const headers = idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {};
-    return this.request("/checkout/process", {
-      method: "POST",
+  // Single-Page Progressive Checkout [REQ-F-002, REQ-F-003, REQ-F-004]
+  async processCheckout(checkoutPayload, idempotencyKey = null) {
+    const headers = { 'Content-Type': 'application/json' };
+    if (idempotencyKey) headers['Idempotency-Key'] = idempotencyKey;
+
+    const res = await fetch(`${API_BASE}/checkout/process`, {
+      method: 'POST',
       headers,
-      body: JSON.stringify(payload)
+      body: JSON.stringify(checkoutPayload)
     });
+    if (!res.ok) throw await res.json();
+    return await res.json();
   },
 
-  // Orders & Tracking
+  // Orders & 3PL Logistics Tracking [REQ-F-006]
   async getOrder(orderId) {
-    return this.request(`/orders/${orderId}`);
+    const res = await fetch(`${API_BASE}/orders/${orderId}`);
+    if (!res.ok) throw await res.json();
+    return await res.json();
   },
 
-  async listOrders(email = null) {
-    const query = email ? `?customer_email=${encodeURIComponent(email)}` : "";
-    return this.request(`/orders${query}`);
+  async getOrderHistory(email) {
+    const params = email ? `?email=${encodeURIComponent(email)}` : '';
+    const res = await fetch(`${API_BASE}/orders/history${params}`);
+    if (!res.ok) throw await res.json();
+    return await res.json();
   },
 
-  // Returns & Exchanges
-  async submitReturn(payload) {
-    return this.request("/returns", {
-      method: "POST",
-      body: JSON.stringify(payload)
+  // Returns & Shade Exchange [REQ-F-007, REQ-F-008]
+  async submitReturn(returnPayload) {
+    const res = await fetch(`${API_BASE}/returns`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(returnPayload)
     });
+    if (!res.ok) throw await res.json();
+    return await res.json();
   },
 
-  // Account & GDPR PII
-  async getAccount(customerId) {
-    return this.request(`/account/${customerId}`);
-  },
-
-  async updateAccount(customerId, data) {
-    return this.request(`/account/${customerId}`, {
-      method: "PUT",
-      body: JSON.stringify(data)
+  // GDPR/CCPA PII Erasure [REQ-F-012]
+  async requestPiiErasure(email) {
+    const res = await fetch(`${API_BASE}/account/pii-erasure`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
     });
-  },
-
-  async erasePII(customerId) {
-    return this.request(`/customers/${customerId}/pii`, {
-      method: "DELETE"
-    });
+    if (!res.ok) throw await res.json();
+    return await res.json();
   }
 };
 
-window.API = API;
+window.StoreAPI = StoreAPI;

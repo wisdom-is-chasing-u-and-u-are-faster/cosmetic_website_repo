@@ -10,8 +10,8 @@ All notable changes to this project will be documented in this file.
     - `.env.example`
     - `.gitignore`
     - `docker-compose.yml`
-    - `app/__init__.py`
-    - `app/main.py`
-    - `app/db/init_db.py`
-    - `app/db/__init__.py`
-    - `app/db/database.py`
+    - `package.json`
+    - `tsconfig.json`
+    - `jest.config.js`
+    - `db/schema.sql`
+    - `db/seed.sql`

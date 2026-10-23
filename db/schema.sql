@@ -1,5 +1,5 @@
--- Enterprise Online Cosmetic Store Database Schema
--- Supports FDA MoCRA & EU 1223/2009 disclosures, faceted shades, inventory locks, orders, and 3PL webhooks
+-- DDL Schema for Enterprise Online Cosmetic Store Platform (ARCH-5134)
+-- Compliant with US FDA MoCRA & EU Cosmetics Regulation (EC) No 1223/2009
 
 CREATE TABLE IF NOT EXISTS products (
     id TEXT PRIMARY KEY,
@@ -7,135 +7,99 @@ CREATE TABLE IF NOT EXISTS products (
     brand TEXT NOT NULL,
     category TEXT NOT NULL,
     price REAL NOT NULL,
-    rating REAL DEFAULT 4.8,
-    description TEXT,
-    finish TEXT,
-    is_hero INTEGER DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS product_shades (
-    id TEXT PRIMARY KEY,
-    product_id TEXT NOT NULL,
-    sku TEXT UNIQUE NOT NULL,
-    shade_name TEXT NOT NULL,
-    hex_code TEXT NOT NULL,
+    shade TEXT NOT NULL,
     skin_tone TEXT NOT NULL,
     undertone TEXT NOT NULL,
-    stock_quantity INTEGER NOT NULL DEFAULT 100,
-    FOREIGN KEY(product_id) REFERENCES products(id) ON DELETE CASCADE
+    finish TEXT NOT NULL,
+    formulation TEXT NOT NULL, -- JSON string or comma-separated
+    allergens TEXT NOT NULL,   -- JSON string or comma-separated
+    ingredients TEXT NOT NULL, -- Full ingredient disclosure list
+    fda_mocra_listed INTEGER DEFAULT 1,
+    eu_1223_2009_compliant INTEGER DEFAULT 1,
+    image_url TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS product_attributes (
-    id TEXT PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS inventory (
+    product_id TEXT PRIMARY KEY,
+    available_stock INTEGER NOT NULL DEFAULT 0,
+    reserved_stock INTEGER NOT NULL DEFAULT 0,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS reservations (
+    reservation_id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL,
     product_id TEXT NOT NULL,
-    formulations TEXT NOT NULL,
-    allergens TEXT NOT NULL,
-    ingredients TEXT NOT NULL,
-    mocra_disclosures TEXT NOT NULL,
-    eu_compliance TEXT NOT NULL,
-    FOREIGN KEY(product_id) REFERENCES products(id) ON DELETE CASCADE
+    quantity INTEGER NOT NULL,
+    status TEXT NOT NULL DEFAULT 'ACTIVE', -- ACTIVE, EXPIRED, CONVERTED
+    expires_at DATETIME NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (product_id) REFERENCES products(id)
 );
 
 CREATE TABLE IF NOT EXISTS promotions (
-    id TEXT PRIMARY KEY,
-    code TEXT UNIQUE NOT NULL,
-    description TEXT,
-    discount_type TEXT NOT NULL,
+    code TEXT PRIMARY KEY,
+    description TEXT NOT NULL,
+    discount_type TEXT NOT NULL, -- PERCENTAGE, FIXED_AMOUNT, SHADE_BUNDLE
     discount_value REAL NOT NULL,
-    min_spend REAL DEFAULT 0.0,
+    minimum_cart_value REAL DEFAULT 0.0,
     is_active INTEGER DEFAULT 1,
-    expires_at TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS inventory_reservations (
-    reservation_id TEXT PRIMARY KEY,
-    sku TEXT NOT NULL,
-    quantity INTEGER NOT NULL,
-    status TEXT NOT NULL DEFAULT "active",
-    expires_at TIMESTAMP NOT NULL,
-    idempotency_key TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS customers (
-    id TEXT PRIMARY KEY,
-    email TEXT UNIQUE NOT NULL,
-    full_name TEXT NOT NULL,
-    phone TEXT,
-    skin_tone_profile TEXT,
-    undertone_profile TEXT,
-    is_pii_erased INTEGER DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS orders (
     id TEXT PRIMARY KEY,
-    order_number TEXT UNIQUE NOT NULL,
-    customer_id TEXT,
-    customer_email TEXT NOT NULL,
+    email TEXT NOT NULL,
+    customer_name TEXT NOT NULL,
     is_guest INTEGER DEFAULT 1,
     total_amount REAL NOT NULL,
     discount_amount REAL DEFAULT 0.0,
     promo_code TEXT,
-    payment_method TEXT NOT NULL,
-    payment_status TEXT NOT NULL,
-    tracking_carrier TEXT DEFAULT "FedEx Express",
-    tracking_number TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT "confirmed",
-    shipping_address TEXT NOT NULL,
-    billing_address TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    status TEXT NOT NULL DEFAULT 'CONFIRMED', -- CONFIRMED, PROCESSING, SHIPPED, DELIVERED, CANCELLED
+    tracking_number TEXT,
+    carrier TEXT DEFAULT 'FedEx Logistics',
+    shipping_address TEXT NOT NULL, -- JSON string
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS order_items (
-    id TEXT PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     order_id TEXT NOT NULL,
-    sku TEXT NOT NULL,
-    product_name TEXT NOT NULL,
-    shade_name TEXT NOT NULL,
+    product_id TEXT NOT NULL,
     quantity INTEGER NOT NULL,
     unit_price REAL NOT NULL,
-    subtotal REAL NOT NULL,
-    FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products(id)
 );
 
 CREATE TABLE IF NOT EXISTS returns (
-    id TEXT PRIMARY KEY,
+    return_id TEXT PRIMARY KEY,
     order_id TEXT NOT NULL,
-    return_type TEXT NOT NULL,
-    original_sku TEXT NOT NULL,
-    exchange_sku TEXT,
+    product_id TEXT NOT NULL,
+    target_shade_id TEXT,
+    type TEXT NOT NULL, -- RETURN, SHADE_EXCHANGE
+    status TEXT NOT NULL DEFAULT 'APPROVED', -- APPROVED, REJECTED, PROCESSING, COMPLETED
     reason TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT "approved",
-    return_label_url TEXT NOT NULL,
+    prepaid_label_url TEXT,
     exchange_order_id TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(order_id) REFERENCES orders(id)
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (order_id) REFERENCES orders(id)
 );
 
-CREATE TABLE IF NOT EXISTS tracking_events (
-    id TEXT PRIMARY KEY,
-    order_id TEXT NOT NULL,
-    tracking_number TEXT NOT NULL,
-    status TEXT NOT NULL,
-    location TEXT NOT NULL,
-    description TEXT NOT NULL,
-    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(order_id) REFERENCES orders(id)
-);
-
-CREATE TABLE IF NOT EXISTS idempotency_records (
+CREATE TABLE IF NOT EXISTS idempotency_keys (
     key TEXT PRIMARY KEY,
-    status_code INTEGER NOT NULL,
+    request_path TEXT NOT NULL,
+    response_code INTEGER NOT NULL,
     response_body TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS audit_logs (
-    id TEXT PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     event_type TEXT NOT NULL,
-    entity_id TEXT NOT NULL,
+    entity_id TEXT,
     details TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
 );
