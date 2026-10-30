@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: skincare_commerce_api
+    ports:
+      - "${PORT:-8000}:8000"
+    environment:
+      - PORT=8000
+      - HOST=0.0.0.0
+      - ENVIRONMENT=development
+      - DATABASE_PATH=skincare_commerce.db
+      - DATABASE_URL=sqlite:///./skincare_commerce.db
+      - REDIS_URL=redis://redis:6379/0
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    security_opt:
+      - "no-new-privileges:true"
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: skincare_postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-pg_dev_local_secret}
+      POSTGRES_DB: skincare_commerce
+    security_opt:
+      - "no-new-privileges:true"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
+      - ./db/seed.sql:/docker-entrypoint-initdb.d/02_seed.sql
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: skincare_redis
+    ports:
+      - "6379:6379"
+    security_opt:
+      - "no-new-privileges:true"
+    volumes:
+      - redisdata:/data
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:

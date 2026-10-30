@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skincare Recommendations & Products - AURA</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <header class="header">
+        <a href="/" class="logo">AURA SKINCARE</a>
+        <nav aria-label="Main Navigation">
+            <ul class="nav-links">
+                <li><a href="/pages/home.html">Home</a></li>
+                <li><a href="/pages/product-finder.html">Skin Finder</a></li>
+                <li><a href="/pages/product-listing.html" style="color: var(--color-primary); font-weight: 700;">Catalog</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="container">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2rem;">
+            <div>
+                <h1>Your Curated Routine &amp; Products</h1>
+                <p id="product-count" style="color: var(--color-text-muted);">Loading recommendations...</p>
+            </div>
+            <a href="/pages/product-finder.html" class="btn-sm" style="background-color: var(--color-accent);">Retake Quiz</a>
+        </div>
+
+        <section id="product-grid" class="grid">
+            <!-- Dynamically populated via SkincareAPI -->
+        </section>
+    </main>
+
+    <script src="/js/api.js"></script>
+</body>
+</html>

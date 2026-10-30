@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Detail - AURA</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <header class="header">
+        <a href="/" class="logo">AURA SKINCARE</a>
+        <nav aria-label="Main Navigation">
+            <ul class="nav-links">
+                <li><a href="/pages/home.html">Home</a></li>
+                <li><a href="/pages/product-finder.html">Skin Finder</a></li>
+                <li><a href="/pages/product-listing.html">Catalog</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="container" id="product-detail-view">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; background: var(--color-surface); padding: 2rem; border-radius: var(--border-radius); border: 1px solid var(--color-border); box-shadow: var(--box-shadow);">
+            <div>
+                <img id="product-image" src="https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=600&q=80" alt="Product Image" style="width: 100%; border-radius: var(--border-radius); object-fit: cover;" />
+            </div>
+
+            <div>
+                <h1 id="product-title" style="margin-bottom: 0.5rem;">Luminous Hydrating Skin Tint SPF 30</h1>
+                <p id="product-price" class="price" style="margin-bottom: 1rem;">$42.00</p>
+                <p id="product-desc" style="color: var(--color-text-muted); margin-bottom: 1.5rem;">A breathable, light-to-medium coverage skin tint infused with Hyaluronic Acid and Squalane for true photorealistic shade fidelity.</p>
+
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="font-weight: 700; display: block; margin-bottom: 0.5rem;">
+                        Shade Swatch: <span id="selected-shade-name" style="font-weight: normal; color: var(--color-primary);">Fair Neutral 100</span>
+                    </label>
+                    <div id="shade-swatches" class="swatches-row" role="radiogroup" aria-label="Shade Swatches">
+                        <!-- Populated dynamically via SkincareAPI -->
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 2rem;">
+                    <button id="reserve-btn" class="btn-primary" style="width: 100%; padding: 1rem; font-size: 1.1rem;">
+                        Add to Bag &amp; Reserve Inventory (10m Hold)
+                    </button>
+                    <p style="font-size: 0.8rem; color: var(--color-text-muted); text-align: center; margin-top: 0.5rem;">
+                        🔒 Flash-sale protection: Reserves real-time inventory for 10 minutes to eliminate overselling.
+                    </p>
+                </div>
+
+                <div style="border-top: 1px solid var(--color-border); padding-top: 1.5rem;">
+                    <h3 style="margin-bottom: 0.5rem;">INCI Ingredient Transparency</h3>
+                    <p id="inci-ingredients" style="font-size: 0.85rem; color: var(--color-text-muted); font-family: monospace;">
+                        Water/Aqua/Eau, Squalane, Isohexadecane, Glycerin, Niacinamide, Sodium Hyaluronate, Zinc Oxide, Iron Oxides (CI 77491, CI 77492, CI 77499), Titanium Dioxide (CI 77891).
+                    </p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="/js/api.js"></script>
+</body>
+</html>
