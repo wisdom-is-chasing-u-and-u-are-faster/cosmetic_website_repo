@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home - Personalized Skincare Product Finder</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <header class="header">
+        <a href="/" class="logo">AURA SKINCARE</a>
+        <nav aria-label="Main Navigation">
+            <ul class="nav-links">
+                <li><a href="/pages/home.html" style="color: var(--color-primary); font-weight: 700;">Home</a></li>
+                <li><a href="/pages/product-finder.html">Skin Finder</a></li>
+                <li><a href="/pages/product-listing.html">Catalog</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="container">
+        <section class="hero">
+            <h1>Formulated for Your Unique Barrier</h1>
+            <p>Clinically proven active ingredients, photorealistic shade matching, and personalized 4-step regimens tailored to your skin attributes.</p>
+            <a href="/pages/product-finder.html" class="btn-primary">Take the 2-Minute Skin Quiz</a>
+        </section>
+
+        <section>
+            <h2 style="margin-bottom: 1.5rem;">Hero Routine Essentials</h2>
+            <div id="product-grid" class="grid">
+                <!-- Dynamically populated via SkincareAPI -->
+            </div>
+        </section>
+    </main>
+
+    <script src="/js/api.js"></script>
+</body>
+</html>

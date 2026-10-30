@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AURA — Personalized Skincare & Decoupled Commerce Engine</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <header class="header">
+        <a href="/" class="logo">AURA SKINCARE</a>
+        <nav aria-label="Main Navigation">
+            <ul class="nav-links">
+                <li><a href="/pages/home.html">Home</a></li>
+                <li><a href="/pages/product-finder.html">Skin Finder</a></li>
+                <li><a href="/pages/product-listing.html">Catalog</a></li>
+                <li><a href="/pages/product-detail.html?product=prod-tint-01">Complexion Tint</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="container">
+        <section class="hero">
+            <h1>Personalized Skincare, Backed by Science</h1>
+            <p>Discover customized morning and evening routines formulated specifically for your skin type, barrier health, and tone.</p>
+            <a href="/pages/product-finder.html" class="btn-primary">Start Skin Quiz &amp; Find Routine</a>
+        </section>
+
+        <section>
+            <h2>Explore Storefront Screens</h2>
+            <div class="grid" style="margin-top: 1.5rem;">
+                <div class="product-card" style="padding: 1.5rem;">
+                    <h3>1. Home Screen</h3>
+                    <p style="margin: 0.5rem 0 1rem 0; color: var(--color-text-muted);">Hero banner, brand philosophy, and featured routines.</p>
+                    <a href="/pages/home.html" class="btn-sm">Launch Home</a>
+                </div>
+                <div class="product-card" style="padding: 1.5rem;">
+                    <h3>2. Product Finder Screen</h3>
+                    <p style="margin: 0.5rem 0 1rem 0; color: var(--color-text-muted);">Interactive quiz with skin types, concerns, and sensitivity sliders.</p>
+                    <a href="/pages/product-finder.html" class="btn-sm">Launch Quiz</a>
+                </div>
+                <div class="product-card" style="padding: 1.5rem;">
+                    <h3>3. Product Listing Screen</h3>
+                    <p style="margin: 0.5rem 0 1rem 0; color: var(--color-text-muted);">Faceted product search with dynamic match scores and routine steps.</p>
+                    <a href="/pages/product-listing.html" class="btn-sm">Launch Catalog</a>
+                </div>
+                <div class="product-card" style="padding: 1.5rem;">
+                    <h3>4. Product Detail Screen</h3>
+                    <p style="margin: 0.5rem 0 1rem 0; color: var(--color-text-muted);">Accurate shade swatch matrices, INCI ingredient disclosures, and 10-minute hold reservation.</p>
+                    <a href="/pages/product-detail.html?product=prod-tint-01" class="btn-sm">Launch PDP</a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="/js/api.js"></script>
+</body>
+</html>
