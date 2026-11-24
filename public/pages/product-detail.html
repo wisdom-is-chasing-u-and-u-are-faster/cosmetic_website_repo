@@ -18,7 +18,7 @@
         </nav>
     </header>
 
-    <main class="container" id="product-detail-view">
+    <main class="container" id="product-detail-view" data-stock-level="0">
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; background: var(--color-surface); padding: 2rem; border-radius: var(--border-radius); border: 1px solid var(--color-border); box-shadow: var(--box-shadow);">
             <div>
                 <img id="product-image" src="https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=600&q=80" alt="Product Image" style="width: 100%; border-radius: var(--border-radius); object-fit: cover;" />
@@ -29,6 +29,11 @@
                 <p id="product-price" class="price" style="margin-bottom: 1rem;">$42.00</p>
                 <p id="product-desc" style="color: var(--color-text-muted); margin-bottom: 1.5rem;">A breathable, light-to-medium coverage skin tint infused with Hyaluronic Acid and Squalane for true photorealistic shade fidelity.</p>
 
+                <!-- REQ-F-008: Stock Status Display -->
+                <div id="stock-info" style="margin-bottom: 1.5rem;">
+                    <span id="stock-status-badge" class="stock-status stock-status-instock">Checking Stock...</span>
+                </div>
+
                 <div style="margin-bottom: 1.5rem;">
                     <label style="font-weight: 700; display: block; margin-bottom: 0.5rem;">
                         Shade Swatch: <span id="selected-shade-name" style="font-weight: normal; color: var(--color-primary);">Fair Neutral 100</span>
@@ -36,6 +41,17 @@
                     <div id="shade-swatches" class="swatches-row" role="radiogroup" aria-label="Shade Swatches">
                         <!-- Populated dynamically via SkincareAPI -->
                     </div>
+                </div>
+
+                <!-- REQ-F-009: Dynamic Quantity Selector & REQ-F-002 Stock Limits -->
+                <div class="quantity-control-wrapper">
+                    <label for="quantity-input" style="font-weight: 700;">Quantity:</label>
+                    <div class="quantity-selector">
+                        <button type="button" id="quantity-minus" aria-label="Decrease quantity">-</button>
+                        <input type="number" id="quantity-input" value="1" min="1" max="1" aria-label="Product quantity">
+                        <button type="button" id="quantity-plus" aria-label="Increase quantity">+</button>
+                    </div>
+                    <span id="stock-limit-hint" style="font-size: 0.85rem; color: var(--color-text-muted);"></span>
                 </div>
 
                 <div style="margin-bottom: 2rem;">

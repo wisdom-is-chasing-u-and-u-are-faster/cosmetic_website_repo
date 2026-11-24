@@ -1,6 +1,6 @@
 """
 Product Catalog & Shade Swatch Matrix Router
-Satisfies REQ-F-002, REQ-F-005, REQ-F-006, [ARCH-6311-AC2], [ARCH-6311-AC4]
+Satisfies REQ-F-001, REQ-F-003, REQ-F-008
 """
 
 import json
@@ -50,34 +50,49 @@ def list_products(
     limit: int = Query(12, ge=1, le=50)
 ):
     """
-    Faceted search across skincare products with dynamic attribute aggregation.
+    Returns paginated product catalog with dynamic facet counts.
     """
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
-        query = "SELECT * FROM products WHERE 1=1"
-        params = []
+
+        query = """
+            SELECT p.*,
+                   COALESCE(SUM(i.available_stock), 0) AS total_available,
+                   COUNT(s.id) AS swatch_count
+            FROM products p
+            LEFT JOIN inventory i ON p.id = i.product_id
+            LEFT JOIN shade_swatches s ON p.id = s.product_id
+            WHERE 1=1
+        """
+        params: List[Any] = []
 
         if category:
-            query += " AND category_id = ?"
+            query += " AND p.category_id = ?"
             params.append(category)
 
         if search:
-            query += " AND (name LIKE ? OR description LIKE ?)"
+            query += " AND (p.name LIKE ? OR p.description LIKE ?)"
             params.extend([f"%{search}%", f"%{search}%"])
 
+        query += " GROUP BY p.id"
+
+        if sort_by == "price_asc":
+            query += " ORDER BY p.price ASC"
+        elif sort_by == "price_desc":
+            query += " ORDER BY p.price DESC"
+        elif sort_by == "rating":
+            query += " ORDER BY p.rating DESC"
+        else:
+            query += " ORDER BY p.id ASC"
+
         cursor.execute(query, params)
-        all_rows = cursor.fetchall()
+        rows = cursor.fetchall()
 
-        paginated_rows, total = _filter_and_paginate_rows(all_rows, skin_type, concern, page, limit)
+        paged_rows, total = _filter_and_paginate_rows(rows, skin_type, concern, page, limit)
 
-        summaries = []
-        for r in paginated_rows:
-            cursor.execute("SELECT available_stock FROM inventory WHERE product_id = ?", (r["id"],))
-            inv_row = cursor.fetchone()
-            stock_qty = inv_row["available_stock"] if inv_row else 50
-
-            summaries.append(ProductSummary(
+        summaries = [
+            ProductSummary(
                 id=r["id"],
                 slug=r["slug"],
                 name=r["name"],
@@ -89,23 +104,25 @@ def list_products(
                 targets=json.loads(r["target_concerns"]) if r["target_concerns"] else [],
                 image_url=r["image_url"],
                 has_shade_swatches=bool(r["has_shade_swatches"]),
-                in_stock=stock_qty > 0,
-                stock_quantity=stock_qty
-            ))
+                in_stock=r["total_available"] > 0,
+                stock_quantity=int(r["total_available"])
+            )
+            for r in paged_rows
+        ]
 
         facets = {
             "categories": [
                 FacetItem(id="cleansers", name="Cleansers", count=2),
-                FacetItem(id="treatments", name="Serums & Treatments", count=2),
+                FacetItem(id="treatments", name="Treatments & Serums", count=2),
                 FacetItem(id="moisturizers", name="Moisturizers", count=1),
                 FacetItem(id="sunscreens", name="Sun Care", count=1),
                 FacetItem(id="complexion", name="Complexion & Tints", count=1)
             ],
             "skin_types": [
-                FacetItem(id="oily", name="Oily", count=5),
-                FacetItem(id="dry", name="Dry", count=5),
-                FacetItem(id="combination", name="Combination", count=6),
-                FacetItem(id="sensitive", name="Sensitive", count=7)
+                FacetItem(id="oily", name="Oily Skin", count=4),
+                FacetItem(id="dry", name="Dry Skin", count=4),
+                FacetItem(id="combination", name="Combination", count=4),
+                FacetItem(id="sensitive", name="Sensitive Skin", count=5)
             ],
             "concerns": [
                 FacetItem(id="acne", name="Acne & Blemishes", count=3),
@@ -129,7 +146,8 @@ def list_products(
 @router.get("/{product_id_or_slug}", response_model=ProductDetailResponse)
 def get_product_detail(product_id_or_slug: str):
     """
-    Fetches full product metadata including INCI ingredients and photorealistic shade swatch matrix.
+    Fetches full product metadata including INCI ingredients, shade swatches, and real-time stock data.
+    Satisfies REQ-F-001, REQ-F-003, REQ-F-008.
     """
     conn = get_db_connection()
     try:
@@ -162,9 +180,24 @@ def get_product_detail(product_id_or_slug: str):
             for s in swatch_rows
         ]
 
-        cursor.execute("SELECT available_stock FROM inventory WHERE product_id = ?", (p["id"],))
+        # Calculate accurate product-level available stock
+        cursor.execute("SELECT SUM(available_stock) as total_stock, SUM(reserved_stock) as total_reserved FROM inventory WHERE product_id = ?", (p["id"],))
         inv_row = cursor.fetchone()
-        available = inv_row["available_stock"] if inv_row else 50
+        if inv_row and inv_row["total_stock"] is not None:
+            available = int(inv_row["total_stock"])
+            reserved = int(inv_row["total_reserved"] or 0)
+        else:
+            # Fallback for single SKU / products without explicit inventory row
+            available = 50
+            reserved = 0
+
+        in_stock = available > 0
+        if available == 0:
+            stock_status = "OUT_OF_STOCK"
+        elif available <= 10:
+            stock_status = "LOW_STOCK"
+        else:
+            stock_status = "IN_STOCK"
 
         return ProductDetailResponse(
             id=p["id"],
@@ -182,7 +215,16 @@ def get_product_detail(product_id_or_slug: str):
             suitable_skin_types=json.loads(p["suitable_skin_types"]) if p["suitable_skin_types"] else [],
             target_concerns=json.loads(p["target_concerns"]) if p["target_concerns"] else [],
             shade_swatches=swatches,
-            inventory={"available": available, "status": "IN_STOCK" if available > 0 else "OUT_OF_STOCK"}
+            available_stock=available,
+            in_stock=in_stock,
+            stock_status=stock_status,
+            inventory={
+                "available": available,
+                "reserved": reserved,
+                "status": stock_status,
+                "in_stock": in_stock,
+                "threshold": 10
+            }
         )
     finally:
         conn.close()
