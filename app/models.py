@@ -100,6 +100,15 @@ class ProductCatalogResponse(BaseModel):
     pagination: Dict[str, int]
 
 
+class ProductInventoryInfo(BaseModel):
+    available: int
+    reserved: int = 0
+    status: str
+    in_stock: bool
+    low_stock: bool
+    threshold: int = 10
+
+
 class ProductDetailResponse(BaseModel):
     id: str
     slug: str
@@ -117,11 +126,24 @@ class ProductDetailResponse(BaseModel):
     target_concerns: List[str]
     shade_swatches: List[ShadeSwatch]
     inventory: Dict[str, Any]
+    available_stock: Optional[int] = None
+    in_stock: Optional[bool] = None
+    stock_status: Optional[str] = None
 
 
 # ------------------------------------------------------------------------------
-# Inventory Hold & Orders
+# Inventory Hold & Stock Control
 # ------------------------------------------------------------------------------
+class StockStatusResponse(BaseModel):
+    sku: str
+    product_id: Optional[str] = None
+    available_stock: int
+    reserved_stock: int
+    in_stock: bool
+    status: str
+    threshold: int = 10
+
+
 class ReservationRequest(BaseModel):
     sku: str
     quantity: int = 1
@@ -134,6 +156,17 @@ class ReservationResponse(BaseModel):
     quantity: int
     expires_at: str
     ttl_seconds: int
+    status: str
+
+
+class ReleaseReservationRequest(BaseModel):
+    reservation_id: str
+
+
+class ReleaseReservationResponse(BaseModel):
+    reservation_id: str
+    sku: str
+    quantity_released: int
     status: str
 
 

@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS shade_swatches (
     FOREIGN KEY (product_id) REFERENCES products(id)
 );
 
--- Inventory Stock Table
+-- Inventory Stock Table (REQ-F-007)
 CREATE TABLE IF NOT EXISTS inventory (
     sku VARCHAR(100) PRIMARY KEY,
     product_id VARCHAR(50) NOT NULL,
@@ -68,6 +68,22 @@ CREATE TABLE IF NOT EXISTS inventory (
     last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (product_id) REFERENCES products(id)
 );
+
+-- Inventory Items Table Alias/Extension (REQ-F-007)
+CREATE TABLE IF NOT EXISTS inventory_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    sku VARCHAR(100) NOT NULL,
+    product_id VARCHAR(50) NOT NULL,
+    available_quantity INTEGER NOT NULL DEFAULT 0,
+    reserved_quantity INTEGER NOT NULL DEFAULT 0,
+    reorder_level INTEGER NOT NULL DEFAULT 10,
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (product_id) REFERENCES products(id),
+    FOREIGN KEY (sku) REFERENCES inventory(sku)
+);
+
+CREATE INDEX IF NOT EXISTS idx_inventory_product_id ON inventory(product_id);
+CREATE INDEX IF NOT EXISTS idx_inventory_items_sku ON inventory_items(sku);
 
 -- Atomic Inventory Holds / Reservations (10-minute hold TTL)
 CREATE TABLE IF NOT EXISTS inventory_reservations (

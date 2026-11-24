@@ -1,6 +1,7 @@
 /**
  * Client-Side Skincare API Layer & Interactive Event Handlers
  * Wires Storefront UI Views to High-Performance FastAPI Backend Endpoints.
+ * ARCH-10099: Added dynamic stock visibility, real-time stock checks, and strict cart quantity controls.
  */
 
 const API_BASE_URL = window.location.origin;
@@ -70,7 +71,19 @@ const SkincareAPI = {
         }
     },
 
-    // Atomic Inventory Reservation
+    // Real-time stock lookup for SKU or product (REQ-F-001, REQ-F-006)
+    async getStock(skuOrProductId) {
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/v1/inventory/${encodeURIComponent(skuOrProductId)}`);
+            if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+            return await res.json();
+        } catch (e) {
+            console.error("Error fetching stock info:", e);
+            return null;
+        }
+    },
+
+    // Atomic Inventory Reservation (REQ-F-002, REQ-F-004, REQ-F-015)
     async reserveInventory(sku, quantity = 1, sessionId = "sess_default") {
         try {
             const res = await fetch(`${API_BASE_URL}/api/v1/inventory/reserve`, {
@@ -78,10 +91,30 @@ const SkincareAPI = {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ sku, quantity, session_id: sessionId })
             });
-            if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                const msg = errorData.detail || `Reservation rejected (HTTP ${res.status})`;
+                throw new Error(msg);
+            }
             return await res.json();
         } catch (e) {
             console.error("Error creating reservation:", e);
+            return { error: true, message: e.message };
+        }
+    },
+
+    // Release stock reservation (REQ-F-006)
+    async releaseInventory(reservationId) {
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/v1/inventory/release`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ reservation_id: reservationId })
+            });
+            if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+            return await res.json();
+        } catch (e) {
+            console.error("Error releasing reservation:", e);
             return null;
         }
     },
@@ -154,43 +187,44 @@ async function initProductFinderPage() {
 
     if (concernsContainer && options.concerns) {
         concernsContainer.innerHTML = options.concerns.map(c => `
-            <button type="button" class="concern-pill" data-concern="${c.id}" aria-pressed="false">
-                ${c.label}
+            <button type="button" class="concern-pill" data-concern="${c.id}">
+                ${c.icon} ${c.label}
             </button>
         `).join("");
 
-        concernsContainer.querySelectorAll(".concern-pill").forEach(btn => {
-            btn.addEventListener("click", () => {
-                const isPressed = btn.getAttribute("aria-pressed") === "true";
-                btn.setAttribute("aria-pressed", !isPressed);
-                btn.classList.toggle("active");
+        concernsContainer.querySelectorAll(".concern-pill").forEach(pill => {
+            pill.addEventListener("click", () => {
+                pill.classList.toggle("active");
             });
         });
     }
 
     if (submitBtn) {
-        submitBtn.addEventListener("click", async (e) => {
-            e.preventDefault();
-            const selectedCard = document.querySelector(".skin-card.selected");
-            const skinType = selectedCard ? selectedCard.getAttribute("data-skin-type") : "combination";
-            
-            const activePills = document.querySelectorAll(".concern-pill.active");
-            const concerns = Array.from(activePills).map(p => p.getAttribute("data-concern"));
+        submitBtn.addEventListener("click", async () => {
+            const selectedSkinType = skinTypeContainer?.querySelector(".skin-card.selected")?.getAttribute("data-skin-type");
+            const selectedConcerns = Array.from(concernsContainer?.querySelectorAll(".concern-pill.active") || []).map(p => p.getAttribute("data-concern"));
+            const sensitivity = document.querySelector('input[name="sensitivity"]:checked')?.value || "medium";
+
+            if (!selectedSkinType) {
+                alert("Please select your primary skin type.");
+                return;
+            }
 
             submitBtn.textContent = "Analyzing Skin Profile...";
             submitBtn.disabled = true;
 
             const recommendations = await SkincareAPI.getRecommendations({
-                skin_type: skinType,
-                concerns: concerns.length ? concerns : ["acne", "redness"],
-                sensitivity: "medium"
+                skin_type: selectedSkinType,
+                concerns: selectedConcerns,
+                sensitivity: sensitivity
             });
 
-            if (recommendations) {
+            if (recommendations && recommendations.routine_steps) {
                 sessionStorage.setItem("last_recommendations", JSON.stringify(recommendations));
                 window.location.href = "/pages/product-listing.html?personalized=true";
             } else {
-                submitBtn.textContent = "Find My Routine";
+                alert("Could not generate recommendations at this time.");
+                submitBtn.textContent = "Generate Personalized Routine";
                 submitBtn.disabled = false;
             }
         });
@@ -252,6 +286,7 @@ async function initProductDetailPage() {
     const product = await SkincareAPI.getProductDetail(slug);
     if (!product) return;
 
+    const pageContainer = document.getElementById("product-detail-view");
     const titleEl = document.getElementById("product-title");
     const priceEl = document.getElementById("product-price");
     const descEl = document.getElementById("product-desc");
@@ -259,47 +294,181 @@ async function initProductDetailPage() {
     const swatchesContainer = document.getElementById("shade-swatches");
     const reserveBtn = document.getElementById("reserve-btn");
 
+    const stockBadge = document.getElementById("stock-status-badge");
+    const quantityInput = document.getElementById("quantity-input");
+    const minusBtn = document.getElementById("quantity-minus");
+    const plusBtn = document.getElementById("quantity-plus");
+    const stockLimitHint = document.getElementById("stock-limit-hint");
+
     if (titleEl) titleEl.textContent = product.name;
     if (priceEl) priceEl.textContent = `$${product.price.toFixed(2)}`;
     if (descEl) descEl.textContent = product.description;
     if (inciEl) inciEl.textContent = product.inci_ingredients;
 
+    // Helper: update UI according to available stock (REQ-F-008, REQ-F-009)
+    function updateStockUI(availableStock) {
+        if (pageContainer) pageContainer.setAttribute("data-stock-level", availableStock);
+
+        const currentVal = parseInt(quantityInput?.value || "1", 10);
+        const lowStockThreshold = 10;
+
+        if (quantityInput) {
+            quantityInput.max = availableStock;
+            if (availableStock === 0) {
+                quantityInput.value = 0;
+                quantityInput.disabled = true;
+            } else {
+                quantityInput.disabled = false;
+                if (currentVal > availableStock) {
+                    quantityInput.value = availableStock;
+                } else if (currentVal < 1) {
+                    quantityInput.value = 1;
+                }
+            }
+        }
+
+        if (availableStock === 0) {
+            if (stockBadge) {
+                stockBadge.textContent = "Out of Stock";
+                stockBadge.className = "stock-status stock-status-out";
+            }
+            if (reserveBtn) {
+                reserveBtn.disabled = true;
+                reserveBtn.textContent = "Out of Stock";
+            }
+            if (minusBtn) minusBtn.disabled = true;
+            if (plusBtn) plusBtn.disabled = true;
+            if (stockLimitHint) stockLimitHint.textContent = "(Product is currently unavailable)";
+        } else if (availableStock <= lowStockThreshold) {
+            if (stockBadge) {
+                stockBadge.textContent = `Only ${availableStock} Left`;
+                stockBadge.className = "stock-status stock-status-low";
+            }
+            if (reserveBtn) {
+                reserveBtn.disabled = false;
+                reserveBtn.textContent = "Add to Bag & Reserve Inventory (10m Hold)";
+            }
+            if (minusBtn) minusBtn.disabled = false;
+            if (plusBtn) plusBtn.disabled = false;
+            if (stockLimitHint) stockLimitHint.textContent = `(Max limit: ${availableStock})`;
+        } else {
+            if (stockBadge) {
+                stockBadge.textContent = "In Stock";
+                stockBadge.className = "stock-status stock-status-instock";
+            }
+            if (reserveBtn) {
+                reserveBtn.disabled = false;
+                reserveBtn.textContent = "Add to Bag & Reserve Inventory (10m Hold)";
+            }
+            if (minusBtn) minusBtn.disabled = false;
+            if (plusBtn) plusBtn.disabled = false;
+            if (stockLimitHint) stockLimitHint.textContent = "";
+        }
+    }
+
+    // Set initial stock from product payload
+    let currentStock = product.available_stock !== undefined ? product.available_stock : (product.inventory?.available || 0);
+    updateStockUI(currentStock);
+
+    // Quantity selector buttons
+    if (minusBtn && quantityInput) {
+        minusBtn.addEventListener("click", () => {
+            const stock = parseInt(pageContainer?.getAttribute("data-stock-level") || `${currentStock}`, 10);
+            let val = parseInt(quantityInput.value || "1", 10);
+            if (val > 1) {
+                quantityInput.value = val - 1;
+            }
+        });
+    }
+
+    if (plusBtn && quantityInput) {
+        plusBtn.addEventListener("click", () => {
+            const stock = parseInt(pageContainer?.getAttribute("data-stock-level") || `${currentStock}`, 10);
+            let val = parseInt(quantityInput.value || "1", 10);
+            if (val < stock) {
+                quantityInput.value = val + 1;
+            }
+        });
+    }
+
+    if (quantityInput) {
+        quantityInput.addEventListener("change", () => {
+            const stock = parseInt(pageContainer?.getAttribute("data-stock-level") || `${currentStock}`, 10);
+            let val = parseInt(quantityInput.value, 10);
+            if (isNaN(val) || val < 1) {
+                quantityInput.value = stock > 0 ? 1 : 0;
+            } else if (val > stock) {
+                // Clamp to available stock (REQ-F-009)
+                quantityInput.value = stock;
+            }
+        });
+    }
+
+    // Swatches interactivity
     if (swatchesContainer && product.shade_swatches && product.shade_swatches.length) {
         swatchesContainer.innerHTML = product.shade_swatches.map((s, idx) => `
             <button class="swatch-btn ${idx === 0 ? 'selected' : ''}" 
                     style="background-color: ${s.hex_color}" 
                     data-sku="${s.sku}" 
                     data-name="${s.shade_name}"
+                    data-stock="${s.stock_quantity}"
                     aria-label="${s.shade_name}" 
-                    title="${s.shade_name}">
+                    title="${s.shade_name} (${s.stock_quantity} available)">
             </button>
         `).join("");
 
+        // If first swatch selected, sync stock
+        const firstSwatch = product.shade_swatches[0];
+        if (firstSwatch) {
+            updateStockUI(firstSwatch.stock_quantity);
+        }
+
         swatchesContainer.querySelectorAll(".swatch-btn").forEach(btn => {
-            btn.addEventListener("click", () => {
+            btn.addEventListener("click", async () => {
                 swatchesContainer.querySelectorAll(".swatch-btn").forEach(b => b.classList.remove("selected"));
                 btn.classList.add("selected");
                 const label = document.getElementById("selected-shade-name");
                 if (label) label.textContent = btn.getAttribute("data-name");
+
+                const sku = btn.getAttribute("data-sku");
+                // Fetch real-time stock for this specific swatch SKU (REQ-F-001)
+                const stockData = await SkincareAPI.getStock(sku);
+                const swatchStock = stockData ? stockData.available_stock : parseInt(btn.getAttribute("data-stock") || "0", 10);
+                updateStockUI(swatchStock);
             });
         });
     }
 
+    // Add to cart & reserve handler
     if (reserveBtn) {
         reserveBtn.addEventListener("click", async () => {
             const activeSwatch = document.querySelector(".swatch-btn.selected");
             const sku = activeSwatch ? activeSwatch.getAttribute("data-sku") : (product.shade_swatches[0]?.sku || "SKU-TINT-100");
-            
+            const selectedQty = parseInt(quantityInput?.value || "1", 10);
+            const maxStock = parseInt(pageContainer?.getAttribute("data-stock-level") || "0", 10);
+
+            // Validation before sending reservation (REQ-F-002, REQ-F-010)
+            if (selectedQty > maxStock) {
+                alert(`Requested quantity (${selectedQty}) exceeds available stock (${maxStock}). Please adjust quantity.`);
+                return;
+            }
+
             reserveBtn.textContent = "Reserving Stock (10m TTL)...";
             reserveBtn.disabled = true;
 
-            const res = await SkincareAPI.reserveInventory(sku, 1, "session_" + Date.now());
+            const res = await SkincareAPI.reserveInventory(sku, selectedQty, "session_" + Date.now());
             if (res && res.reservation_id) {
-                alert(`✨ Reserved! Hold ID: ${res.reservation_id} (Expires in 10 minutes)`);
+                alert(`✨ Reserved! Hold ID: ${res.reservation_id} for quantity ${res.quantity} (Expires in 10 minutes)`);
                 reserveBtn.textContent = "Hold Confirmed ✓";
+                // Re-query stock after reservation
+                const updatedStock = await SkincareAPI.getStock(sku);
+                if (updatedStock) {
+                    updateStockUI(updatedStock.available_stock);
+                }
             } else {
-                alert("Inventory reservation failed.");
-                reserveBtn.textContent = "Add to Bag";
+                const errMsg = res?.message || "Inventory reservation failed.";
+                alert(`Failed to reserve stock: ${errMsg}`);
+                reserveBtn.textContent = "Add to Bag & Reserve Inventory (10m Hold)";
                 reserveBtn.disabled = false;
             }
         });

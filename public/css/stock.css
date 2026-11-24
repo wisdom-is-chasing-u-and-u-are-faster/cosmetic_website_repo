@@ -1,0 +1,100 @@
+
+
+/* ==============================================================================
+   Stock Status Badges & Dynamic Quantity Controls (ARCH-10099)
+   ============================================================================== */
+.stock-status {
+    display: inline-block;
+    padding: 0.35rem 0.85rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.stock-status-instock {
+    background-color: #EBF7EE;
+    color: #1E6B2A;
+    border: 1px solid #A3D8B0;
+}
+
+.stock-status-low {
+    background-color: #FFF8E1;
+    color: #B45309;
+    border: 1px solid #FCD34D;
+}
+
+.stock-status-out {
+    background-color: #FEF2F2;
+    color: #991B1B;
+    border: 1px solid #FCA5A5;
+}
+
+.quantity-control-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.quantity-selector {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+    background: var(--color-surface);
+    overflow: hidden;
+}
+
+.quantity-selector button {
+    background: var(--color-surface-light);
+    border: none;
+    color: var(--color-text-dark);
+    font-size: 1.25rem;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 0 0.85rem;
+    height: 42px;
+    transition: background-color 0.15s ease;
+}
+
+.quantity-selector button:hover:not(:disabled) {
+    background: var(--color-border);
+}
+
+.quantity-selector button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.quantity-selector input {
+    width: 55px;
+    height: 42px;
+    text-align: center;
+    border: none;
+    border-left: 1px solid var(--color-border);
+    border-right: 1px solid var(--color-border);
+    font-size: 1rem;
+    font-weight: 600;
+    -moz-appearance: textfield;
+}
+
+.quantity-selector input::-webkit-outer-spin-button,
+.quantity-selector input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.quantity-selector input:disabled {
+    background-color: #F3F4F6;
+    color: #9CA3AF;
+    cursor: not-allowed;
+}
+
+.btn-primary:disabled {
+    background-color: #D1D5DB;
+    color: #6B7280;
+    cursor: not-allowed;
+    border-color: #D1D5DB;
+}
